@@ -8,10 +8,29 @@
 <!-- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * -->
 
 <main class="main">
-  <!-- <div class="content"> -->
-    <!-- {{title}} -->
-  <!-- </div> -->
-  <canvas id="canvas"></canvas>
+  <div class="content">
+    @if (this.game) {
+    Health: {{this.game.player?.getHealth()}}
+    Score: {{this.game.player?.getScore()}}
+    }
+  </div>
+  <div class="gamepad" style="border-width: 15px; border-color: black; background-color: green;">
+    <canvas id="canvas"></canvas>
+    <div class="controller" style="display: flex; justify-content: space-between; width: 100%;">
+      <div class="button-group-one">
+        <button>a</button>
+        <button>b</button>
+      </div>
+      <div class="button-group-menu">
+        <button (click)="this.pause()">menu</button>
+      </div>
+      <div class="button-group-two">
+        <button>a</button>
+        <button>b</button>
+      </div>
+    </div>
+  </div>
+
 </main>
 
 <!-- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * -->

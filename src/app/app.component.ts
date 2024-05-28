@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, ElementRef, ViewChild } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, OnChanges, SimpleChanges, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterOutlet } from '@angular/router';
 import { Game } from './entities/game';
@@ -11,27 +11,41 @@ import { Game } from './entities/game';
   styleUrls: ['./app.component.css']
 })
 export class AppComponent implements AfterViewInit {
-  @ViewChild('canvas', { static: false }) myCanvas!: ElementRef<HTMLCanvasElement>;
+  @ViewChild('canvas', { static: false })
+  canvas!: HTMLCanvasElement;
   game!: Game;
+
+  onInit() {
+    this.game = new Game(this.canvas);
+  }
 
   ngAfterViewInit(): void {
     this.startGame();
   }
 
   startGame() {
-    window.addEventListener('load', () => {
-      const canvas = document.querySelector('canvas')!;
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-      // console.log(canvas)
-      const game = new Game(canvas);
-      
-      function animate(){
-        game.render();
-        requestAnimationFrame(animate);
-      }
-      animate();
-  });
-}
+    if (!document.querySelector('canvas')) console.log('Canvas not found,');
+    this.canvas = (document.querySelector('canvas') as HTMLCanvasElement);
+    this.canvas.width = 800;
+    this.canvas.height = 400;
+    this.game = new Game(this.canvas);
+
+    const animate = () =>{
+      this.game.render();
+      requestAnimationFrame(animate);
+    }
+    animate();
+  };
+  
+  restart() {
+    this.game = new Game(this.canvas);
+    const animate = () => this.game.render();
+    animate();
+  }
+
+  pause() {
+    this.game.pause = !this.game.pause;
+  }
+
 }
 

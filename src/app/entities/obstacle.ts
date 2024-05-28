@@ -1,12 +1,21 @@
-import { Camera } from "./camera";
+import { Attributes } from "../types/attributes";
 import { Entity } from "./entity";
 
 export class Obstacle extends Entity {
-  constructor(camera: Camera, x: number, y: number, height: number, width: number, color: string) {
+  constructor(attributes: Attributes) {
     super({
-      position: { x: camera.x + 50 + x, y: window.innerHeight - (camera.y + 110) - y },
-      size: { width, height },
-      color
+      ...attributes,
     });
+  }
+  override draw(context: CanvasRenderingContext2D): void {
+    const { position, size } = this.getAttributes();
+    // context.fillRect(position.x, position.y, size.width, size.height);
+    // const img = new Image();
+    const img = document.createElement('img');
+    document.body.appendChild(img);
+    img.id = 'bug';
+    img.src = 'assets/img/bug.png';
+    img.style.display = 'none';
+    context.drawImage((document.getElementById('bug') as HTMLImageElement), position.x, position.y, size.width, size.height);
   }
 }

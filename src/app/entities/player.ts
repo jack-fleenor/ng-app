@@ -1,5 +1,5 @@
 import { Attributes } from '../types/attributes';
-import { Camera } from './camera';
+import { Enemy } from './enemy';
 import { Entity } from './entity';
 import { Game } from './game';
 import { Ground } from './ground';
@@ -9,26 +9,28 @@ import { Platform } from './platform';
 export class Player extends Entity {
   private jumping: boolean = false;
   private verticalVelocity: number = 0;
-  private speed: number = 5;
+  private speed: number = 3;
   private base: number = 0;
-
+  private health: number = 100;
+  private score: number = 0;
   constructor(private game: Game, attributes: Attributes) {
-    super({
-      ...attributes,
-      position: {
-        x: attributes.position.x + attributes.size.width,
-        y: attributes.position.y - attributes.size.height,
-      },
-    });
-    this.base = window.innerHeight - this.game.camera.y + attributes.size.height
+    super(attributes);
+    this.base = window.innerHeight - this.game.canvas.width + attributes.size.height
   }
-
+  override draw(context: CanvasRenderingContext2D): void {
+    const { position, size } = this.getAttributes();
+    const img = document.createElement('img');
+    document.body.appendChild(img);
+    img.id = 'player';
+    img.src = 'assets/img/wubby.png';
+    img.style.display = 'none';
+    context.drawImage((document.getElementById('player') as HTMLImageElement), position.x, position.y, size.width, size.height);
+  }
   update() {
-    const { position } = this.getAttributes();
+    const { position, size } = this.getAttributes();
     if (this.game.keys.get('ArrowLeft')) position.x -= this.speed;
     if (this.game.keys.get('ArrowRight')) position.x += this.speed;
-
-    // console.log('update')
+    
     // Check if player is standing on a platform
     let onPlatform = false;
     for (const entity of this.game.objects) {
@@ -37,24 +39,55 @@ export class Player extends Entity {
         this.isOnTopOf(entity)
       ) {
         onPlatform = true;
-        break;
+      }
+      if(entity instanceof Platform || entity instanceof Ground || entity instanceof Obstacle){
+        if(this.collision(entity)){
+          const touching = {
+            left: entity.attributes.position.x > size.width,
+            right: entity.attributes.position.x < size.width,
+          }
+          switch (true) {
+            case touching.left:
+              position.x -= 15;
+              break;
+            case touching.right:
+              position.x += entity.attributes.size.width + entity.attributes.position.x + 15;
+              break;
+            default:
+              break;
+          }
+        }
       }
       if (
-        entity instanceof Obstacle &&
+        entity instanceof Enemy &&
         this.isLandingOnTop(entity.getAttributes())
       ) {
-        this.game.objects = this.game.objects.filter((obj) => obj !== entity);
-        break;
+        this.game.objects = this.game.objects.filter((obj) => (obj instanceof Enemy) ? obj.id !== entity.id :  obj);
+        this.score += 10;
+        return;
       }
       if (
-        entity instanceof Obstacle &&
-        this.collision(entity) &&
-        !this.isOnTopOf(entity)
+        entity instanceof Enemy &&
+        this.collision(entity)
       ) {
-        console.log('hit')
-        // this.game.pause = true;
-        window.location.reload();
-        break;
+        this.health -= 10;
+        const touching = {
+          top: entity.attributes.position.y < size.height,
+          bottom: entity.attributes.position.y > size.height,
+          left: entity.attributes.position.x < size.width,
+          right: entity.attributes.position.x > size.width,
+        } 
+        switch (true) {
+          case touching.left:
+            position.x += 10;
+            break;
+          case touching.right:
+            position.x -= 10;
+            break;
+          default:
+            break;
+        }
+        return;
       }
     }
 
@@ -65,17 +98,24 @@ export class Player extends Entity {
 
     if (this.game.keys.get('Enter') && !this.jumping) {
       this.jumping = true;
-      this.verticalVelocity = -20;
+      this.verticalVelocity = -13;
     }
     if (this.jumping) {
       this.jump();
     }
   }
 
+  public getHealth(){
+    return this.health;
+  }
+  public getScore(){
+    return this.score;
+  }
+
   private jump() {
     const { position, size } = this.getAttributes();
     position.y += this.verticalVelocity;
-    this.verticalVelocity += 1;
+    this.verticalVelocity += .5;
 
     // Check for collision with ground
     if (position.y >= this.base) {
@@ -101,55 +141,18 @@ export class Player extends Entity {
           position.y = platformAttrs.position.y - size.height;
           this.jumping = false;
           this.verticalVelocity = 0;
+        } else {
+          // If hitting the side of the platform
+          if (position.x < platformAttrs.position.x) {
+            position.x = platformAttrs.position.x + size.width;
+          } else {
+            position.x = platformAttrs.position.x + platformAttrs.size.width;
+          }
         }
       }
     }
   }
 
-  private isOnTopOf(entity: Entity): boolean {
-    const { position, size } = this.getAttributes();
-    const { position: entityPosition, size: entitySize } =
-      entity.getAttributes();
 
-    return (
-      position.y + size.height === entityPosition.y &&
-      position.x < entityPosition.x + entitySize.width &&
-      position.x + size.width > entityPosition.x
-    );
-  }
 
-  private isHittingBottom(platformAttrs: Attributes): boolean {
-    const { position, size } = this.getAttributes();
-    return (
-      position.y < platformAttrs.position.y + platformAttrs.size.height &&
-      position.y + size.height >
-        platformAttrs.position.y + platformAttrs.size.height &&
-      position.x < platformAttrs.position.x + platformAttrs.size.width &&
-      position.x + size.width > platformAttrs.position.x
-    );
-  }
-
-  private isLandingOnTop(platformAttrs: Attributes): boolean {
-    const { position, size } = this.getAttributes();
-    return (
-      position.y + size.height > platformAttrs.position.y &&
-      position.y + size.height <
-        platformAttrs.position.y + platformAttrs.size.height &&
-      position.x < platformAttrs.position.x + platformAttrs.size.width &&
-      position.x + size.width > platformAttrs.position.x
-    );
-  }
-
-  collision(entity: Entity): boolean {
-    const { position, size } = this.getAttributes();
-    const { position: entityPosition, size: entitySize } =
-      entity.getAttributes();
-
-    return (
-      position.x < entityPosition.x + entitySize.width &&
-      position.x + size.width > entityPosition.x &&
-      position.y < entityPosition.y + entitySize.height &&
-      position.y + size.height > entityPosition.y
-    );
-  }
 }
